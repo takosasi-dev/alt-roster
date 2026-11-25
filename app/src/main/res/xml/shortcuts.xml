@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 決まったショートカット 1 つだけ。使った回数で中身を変えるショートカットは使わない。 -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_add"
+        android:shortcutId="gacha_entry"
+        android:shortcutLongLabel="@string/shortcut_gacha_long"
+        android:shortcutShortLabel="@string/shortcut_gacha_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.takosasidev.altroster.MainActivity"
+            android:targetPackage="io.github.takosasidev.altroster">
+            <extra
+                android:name="io.github.takosasidev.altroster.DESTINATION"
+                android:value="gacha_entry" />
+        </intent>
+    </shortcut>
+</shortcuts>

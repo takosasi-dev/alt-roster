@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  画面の中の文は Compose の側に日本語で直接書いている(日本語だけの個人用アプリのため)。
+  ここには、OS の側から参照される文字列だけを置く。
+-->
+<resources>
+    <string name="app_name">AltRoster</string>
+    <string name="shortcut_gacha_short">課金を記録</string>
+    <string name="shortcut_gacha_long">課金・ガチャを記録する</string>
+    <string name="widget_label">スタミナと期限</string>
+    <string name="widget_description">全部のタイトルのスタミナが満タンになる時刻と、いちばん近い期限を表示します</string>
+    <string name="channel_stamina">スタミナの通知</string>
+    <string name="channel_event">イベントの期限の通知</string>
+    <string name="channel_task">タスクのリセットの通知</string>
+    <string name="channel_digest">1 日 1 回のダイジェスト</string>
+</resources>

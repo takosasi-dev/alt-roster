@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 名簿(ロスター)の 3 行。丸がアカウント、横棒がスタミナのゲージ(満タン・途中・少し)。自分で描いた図形だけ。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- ゲージの溝 -->
+    <path
+        android:fillColor="#4C5C91"
+        android:pathData="M46,37h34a3,3 0,0 1,0 6h-34a3,3 0,0 1,0 -6z M46,51h34a3,3 0,0 1,0 6h-34a3,3 0,0 1,0 -6z M46,65h34a3,3 0,0 1,0 6h-34a3,3 0,0 1,0 -6z" />
+    <!-- ゲージの中身 -->
+    <path
+        android:fillColor="#FFC857"
+        android:pathData="M46,37h34a3,3 0,0 1,0 6h-34a3,3 0,0 1,0 -6z" />
+    <path
+        android:fillColor="#7BD88F"
+        android:pathData="M46,51h20a3,3 0,0 1,0 6h-20a3,3 0,0 1,0 -6z" />
+    <path
+        android:fillColor="#88C0E8"
+        android:pathData="M46,65h8a3,3 0,0 1,0 6h-8a3,3 0,0 1,0 -6z" />
+    <!-- アカウントの丸 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M33,40m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0 M33,54m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0 M33,68m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
+</vector>

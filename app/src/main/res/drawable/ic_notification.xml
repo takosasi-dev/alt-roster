@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  通知の小さいアイコン。Android は小さいアイコンを透明度だけで描くので、線ではなく面で形を作る。
+  横棒のゲージが 3 本(上から、満タン・途中・少し)。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M3,5h18v3h-18z M3,10.5h12v3h-12z M3,16h6v3h-6z" />
+</vector>

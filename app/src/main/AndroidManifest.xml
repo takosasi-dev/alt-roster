@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      INTERNET の権限は宣言しない。権限が無ければ、通信のコードが紛れ込んでも実行時に失敗するので、
+      完全オフライン(ゲームのサーバーにも、どこにもつながない)が仕組みとして保たれる。
+    -->
+    <!-- 通知を出す(Android 13 以降は、利用者が許可したときだけ) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- スタミナの満タンやイベントの期限を、決めた時刻に知らせる(利用者が設定で許可したときだけ正確になる) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- 端末を再起動すると消えるアラームを、起動のあとに仕込み直す -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.App">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- アイコンの長押しの「課金を記録」 -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity>
+
+        <!-- ホーム画面のウィジェット(Jetpack Glance) -->
+        <receiver
+            android:name=".widget.RosterWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/roster_widget_info" />
+        </receiver>
+
+        <!--
+          通知のアラームの受け口。アプリ自身が仕込んだアラームのほか、再起動・時計や時間帯の変更・
+          アプリの更新のあとに呼ばれて、アラームを仕込み直す。外のアプリからは呼べない(exported=false)。
+        -->
+        <receiver
+            android:name=".notify.AlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

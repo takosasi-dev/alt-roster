@@ -16,10 +16,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Autorenew
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.FileUpload
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,7 +55,6 @@ import io.github.takosasidev.altroster.data.backup.BackupManager
 import io.github.takosasidev.altroster.data.backup.BackupReadResult
 import io.github.takosasidev.altroster.ui.RosterViewModel
 import io.github.takosasidev.altroster.ui.common.ConfirmDialog
-import io.github.takosasidev.altroster.ui.common.SectionHeader
 import kotlinx.coroutines.launch
 
 /**
@@ -153,82 +156,113 @@ fun BackupScreen(vm: RosterViewModel, onBack: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Column(
-            Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 32.dp),
         ) {
-            SectionHeader("書き出し")
-            Text(
-                "全部の記録と設定を 1 つの zip にします。ログインの手がかりのメモも入ります。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Group(
+                "書き出し",
+                listOf<@Composable () -> Unit>({
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            LeadingIcon(Icons.Outlined.FileUpload)
+                            Text(
+                                "全部の記録と設定を 1 つの zip にします。ログインの手がかりのメモも入ります。",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 16.dp),
+                            )
+                        }
+                        OutlinedTextField(
+                            value = exportPassword,
+                            onValueChange = { exportPassword = it.take(64) },
+                            label = { Text("パスワード(任意)") },
+                            supportingText = { Text("入れると AES-256 で暗号化します。忘れると復元できません。空なら暗号化しません。") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Button(
+                            enabled = !busy,
+                            onClick = { createZip.launch(AutoBackupRule.fileName(AutoBackupRule.MANUAL_PREFIX, vm.now(), vm.zone())) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text("書き出す") }
+                    }
+                }),
             )
-            OutlinedTextField(
-                value = exportPassword,
-                onValueChange = { exportPassword = it.take(64) },
-                label = { Text("パスワード(任意)") },
-                supportingText = { Text("入れると AES-256 で暗号化します。忘れると復元できません。空なら暗号化しません。") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Button(
-                enabled = !busy,
-                onClick = { createZip.launch(AutoBackupRule.fileName(AutoBackupRule.MANUAL_PREFIX, vm.now(), vm.zone())) },
-            ) { Text("書き出す") }
 
-            SectionHeader("復元(取り込み)")
-            Text(
-                "書き出した zip を選ぶと、今の記録を全部置き換えます。置き換える前に、中身の件数を確かめる画面が出ます。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Group(
+                "復元(取り込み)",
+                listOf<@Composable () -> Unit>({
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            LeadingIcon(Icons.Outlined.FileDownload)
+                            Text(
+                                "書き出した zip を選ぶと、今の記録を全部置き換えます。置き換える前に、中身の件数を確かめる画面が出ます。",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 16.dp),
+                            )
+                        }
+                        OutlinedButton(
+                            enabled = !busy,
+                            onClick = { openZip.launch(arrayOf(BackupManager.ZIP_MIME, "application/octet-stream")) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text("zip を選ぶ") }
+                    }
+                }),
             )
-            OutlinedButton(enabled = !busy, onClick = { openZip.launch(arrayOf(BackupManager.ZIP_MIME, "application/octet-stream")) }) {
-                Text("zip を選ぶ")
-            }
 
-            SectionHeader("自動のバックアップ")
-            SwitchRow(
-                title = "アプリを開いたときに自動で書き出す",
-                note = "決めた日数がたっていたら、開いたときに 1 回だけ、下のフォルダへ書き出します(パスワードは付きません)。",
-                checked = settings.autoBackupEnabled,
-                onCheckedChange = { value -> vm.launch { updateSettings { setAutoBackupEnabled(value) } } },
-            )
             val folderName = treeUri?.let { BackupManager.treeDisplayName(context, Uri.parse(it)) }
-            ActionRow(
-                title = "保存先: ${folderName ?: if (treeUri == null) "まだ選んでいません" else "読めません(選び直してください)"}",
-                note = null,
-                action = "選ぶ",
-                onAction = { pickFolder.launch(null) },
+            Group(
+                "自動のバックアップ",
+                listOf<@Composable () -> Unit>(
+                    {
+                        SwitchRow(
+                            title = "アプリを開いたときに自動で書き出す",
+                            note = "決めた日数がたっていたら、開いたときに 1 回だけ、下のフォルダへ書き出します(パスワードは付きません)。",
+                            checked = settings.autoBackupEnabled,
+                            icon = Icons.Outlined.Autorenew,
+                            onCheckedChange = { value -> vm.launch { updateSettings { setAutoBackupEnabled(value) } } },
+                        )
+                    },
+                    {
+                        ActionRow(
+                            title = "保存先: ${folderName ?: if (treeUri == null) "まだ選んでいません" else "読めません(選び直してください)"}",
+                            note = null,
+                            action = "選ぶ",
+                            icon = Icons.Outlined.Folder,
+                            onAction = { pickFolder.launch(null) },
+                        )
+                    },
+                    {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("間隔", style = MaterialTheme.typography.bodyLarge)
+                            Segments(listOf(1, 3, 7, 14, 30).map { it to "${it}日" }, settings.autoBackupIntervalDays) { days ->
+                                vm.launch { updateSettings { setAutoBackupIntervalDays(days) } }
+                            }
+                        }
+                    },
+                    {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("残す数(これを超えた古い自動の分は消します)", style = MaterialTheme.typography.bodyLarge)
+                            Segments(listOf(3, 5, 10, 20).map { it to "${it}個" }, settings.autoBackupKeepCount) { count ->
+                                vm.launch { updateSettings { setAutoBackupKeepCount(count) } }
+                            }
+                        }
+                    },
+                    {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(
+                                "最後に自動で書き出した日時: " + (settings.lastAutoBackupAt?.let { Format.dateTime(it, vm.zone()) } ?: "まだありません"),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            autoError?.let {
+                                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    },
+                ),
             )
-            Text("間隔", style = MaterialTheme.typography.labelLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(1, 3, 7, 14, 30).forEach { days ->
-                    FilterChip(
-                        selected = settings.autoBackupIntervalDays == days,
-                        onClick = { vm.launch { updateSettings { setAutoBackupIntervalDays(days) } } },
-                        label = { Text("${days}日") },
-                    )
-                }
-            }
-            Text("残す数(これを超えた古い自動の分は消します)", style = MaterialTheme.typography.labelLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(3, 5, 10, 20).forEach { count ->
-                    FilterChip(
-                        selected = settings.autoBackupKeepCount == count,
-                        onClick = { vm.launch { updateSettings { setAutoBackupKeepCount(count) } } },
-                        label = { Text("${count}個") },
-                    )
-                }
-            }
-            Text(
-                "最後に自動で書き出した日時: " + (settings.lastAutoBackupAt?.let { Format.dateTime(it, vm.zone()) } ?: "まだありません"),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            autoError?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            }
-            Text("", modifier = Modifier.padding(bottom = 24.dp))
         }
     }
 

@@ -11,7 +11,8 @@
 | AndroidX Core KTX(androidx.core:core-ktx) | 1.13.1 | Apache-2.0 |
 | AndroidX Lifecycle(lifecycle-runtime-ktx / lifecycle-runtime-compose / lifecycle-viewmodel-compose) | 2.8.6 | Apache-2.0 |
 | AndroidX Activity Compose(androidx.activity:activity-compose) | 1.9.2 | Apache-2.0 |
-| Jetpack Compose(ui / ui-graphics / ui-tooling-preview / material3 / material-icons-extended。BOM 2024.10.00) | BOM 2024.10.00 | Apache-2.0 |
+| Jetpack Compose(ui / ui-graphics / ui-tooling-preview / material-icons-extended。BOM 2024.10.00) | BOM 2024.10.00 | Apache-2.0 |
+| Compose Material 3(androidx.compose.material3:material3。Expressive の部品のため BOM より新しい版。これが引き込む Compose の ui・foundation・runtime も BOM より新しくなる) | 1.5.0-alpha12 | Apache-2.0 |
 | Navigation Compose(androidx.navigation:navigation-compose) | 2.8.2 | Apache-2.0 |
 | Room(room-runtime / room-ktx) | 2.6.1 | Apache-2.0 |
 | DataStore Preferences(androidx.datastore:datastore-preferences) | 1.1.1 | Apache-2.0 |
@@ -32,6 +33,9 @@
 | JUnit 4 | 4.13.2 | EPL-1.0 |
 | kotlin-test-junit | 2.0.21 | Apache-2.0 |
 | kotlinx-coroutines-test | 1.9.0 | Apache-2.0 |
+| Compose UI Test(androidx.compose.ui:ui-test-junit4。画面の画像を撮るテスト) | BOM 2024.10.00 | Apache-2.0 |
+| Robolectric(org.robolectric:robolectric) | 4.14.1 | MIT |
+| Roborazzi(io.github.takahirom.roborazzi:roborazzi / roborazzi-compose) | 1.32.2 | Apache-2.0 |
 
 Apache License 2.0 の全文: <https://www.apache.org/licenses/LICENSE-2.0>
 

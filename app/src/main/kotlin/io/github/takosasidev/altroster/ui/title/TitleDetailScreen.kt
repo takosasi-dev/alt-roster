@@ -1,6 +1,12 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 
 package io.github.takosasidev.altroster.ui.title
+
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.Shape
+import io.github.takosasidev.altroster.ui.common.groupShape
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -136,11 +142,13 @@ fun TitleDetailScreen(vm: RosterViewModel, titleId: Long, onBack: () -> Unit) {
         val events = roster.events.filter { it.gameTitleId == title.id }.sortedBy { it.endAt }
 
         Column(
-            Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+            Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
-            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                TitleAvatar(title, size = 56.dp)
+            Row(Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                TitleAvatar(title, size = 64.dp)
                 Column(Modifier.padding(start = 16.dp)) {
+                    Text(title.name, style = MaterialTheme.typography.headlineSmallEmphasized, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     if (title.isArchived) {
                         Text("アーカイブ済み(一覧と通知から外しています)", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
@@ -151,8 +159,9 @@ fun TitleDetailScreen(vm: RosterViewModel, titleId: Long, onBack: () -> Unit) {
             }
 
             SectionHeader("アカウント")
-            accounts.forEach { account ->
+            accounts.forEachIndexed { index, account ->
                 AccountCard(
+                    shape = groupShape(index, accounts.size),
                     account = account,
                     staminas = roster.staminas.filter { it.gameAccountId == account.id },
                     tasks = roster.tasks.filter { it.gameAccountId == account.id }.sortedWith(compareBy({ it.sortOrder }, { it.id })),
@@ -174,16 +183,20 @@ fun TitleDetailScreen(vm: RosterViewModel, titleId: Long, onBack: () -> Unit) {
             if (events.isEmpty()) {
                 Text("イベントの期限を登録すると、残り時間と終了前の通知が出ます。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            events.forEach { event ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = event.isCompleted,
-                        onCheckedChange = { value -> vm.launch { saveEvent(event.copy(isCompleted = value)) } },
-                    )
-                    Column(Modifier.weight(1f)) {
-                        EventRow(event, Format.dateTime(event.endAt, zone) + " まで" + if (event.isCompleted) " ・ 対応済み" else "", now, onComplete = null)
+            events.forEachIndexed { index, event ->
+                Surface(shape = groupShape(index, events.size), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                    Row(Modifier.padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = event.isCompleted,
+                            onCheckedChange = { value -> vm.launch { saveEvent(event.copy(isCompleted = value)) } },
+                        )
+                        Column(Modifier.weight(1f)) {
+                            EventRow(event, Format.dateTime(event.endAt, zone) + " まで" + if (event.isCompleted) " ・ 対応済み" else "", now, onComplete = null)
+                        }
+                        IconButton(onClick = { sheet = Sheet.EditEvent(event) }) {
+                            Icon(Icons.Outlined.Edit, contentDescription = "イベントを編集", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
-                    IconButton(onClick = { sheet = Sheet.EditEvent(event) }) { Icon(Icons.Filled.Edit, contentDescription = "イベントを編集") }
                 }
             }
             TextButton(onClick = { sheet = Sheet.EditEvent(null) }, modifier = Modifier.padding(bottom = 32.dp)) {
@@ -311,6 +324,7 @@ private fun lossText(described: String): String =
 
 @Composable
 private fun AccountCard(
+    shape: Shape,
     account: GameAccount,
     staminas: List<StaminaResource>,
     tasks: List<DailyTask>,
@@ -323,11 +337,11 @@ private fun AccountCard(
     onToggleTask: (DailyTask, Boolean) -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
-    Card(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Column(Modifier.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 8.dp)) {
+    Card(Modifier.fillMaxWidth(), shape = shape) {
+        Column(Modifier.padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(account.label, style = MaterialTheme.typography.titleMedium)
+                    Text(account.label, style = MaterialTheme.typography.titleMediumEmphasized)
                     if (account.isArchived) {
                         Text("アーカイブ済み", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     }
@@ -355,7 +369,7 @@ private fun AccountCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StaminaGauge(r, accent, now, zone, modifier = Modifier.weight(1f))
                     IconButton(onClick = { onSheet(Sheet.EditStamina(account.id, r)) }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "${r.resourceName} を編集")
+                        Icon(Icons.Outlined.Edit, contentDescription = "${r.resourceName} を編集", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -363,7 +377,7 @@ private fun AccountCard(
                 Row(Modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
                     TaskCheckRow(task.label, resetLabel(task), task.id in checked, { onToggleTask(task, it) }, Modifier.weight(1f))
                     IconButton(onClick = { onSheet(Sheet.EditTask(account.id, task)) }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "${task.label} を編集")
+                        Icon(Icons.Outlined.Edit, contentDescription = "${task.label} を編集", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

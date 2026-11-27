@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 
 package io.github.takosasidev.altroster.ui.common
 
@@ -55,6 +55,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -78,6 +79,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -90,6 +92,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -100,7 +103,9 @@ import io.github.takosasidev.altroster.core.Format
 import io.github.takosasidev.altroster.core.calc.Stamina
 import io.github.takosasidev.altroster.core.model.GameTitle
 import io.github.takosasidev.altroster.core.model.StaminaResource
+import io.github.takosasidev.altroster.ui.theme.LocalStatusColors
 import io.github.takosasidev.altroster.ui.theme.PaletteColors
+import io.github.takosasidev.altroster.ui.theme.titleTones
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.Instant
@@ -148,18 +153,33 @@ val TitleIcons: Map<String, ImageVector> = linkedMapOf(
     "globe" to Icons.Filled.Public,
 )
 
+/** 読み上げに渡すアイコンの名前(保存するキーは英語なので、そのまま読ませない)。 */
+val TitleIconLabels: Map<String, String> = mapOf(
+    "gamepad" to "ゲームパッド", "star" to "星", "heart" to "ハート", "bolt" to "稲妻", "shield" to "盾",
+    "castle" to "城", "rocket" to "ロケット", "music" to "音符", "pets" to "足あと", "puzzle" to "パズル",
+    "car" to "車", "ball" to "ボール", "sparkle" to "きらめき", "diamond" to "ダイヤ", "fire" to "炎", "globe" to "地球",
+)
+
 /** 色の上に載せる文字やアイコンの色。明るい色の上は黒、暗い色の上は白。 */
 fun onColor(background: Color): Color = if (background.luminance() > 0.5f) Color.Black else Color.White
 
-/** タイトルの丸い目印。内蔵のアイコンか、名前の頭文字を、タイトルの色の上に出す。 */
+/** まとまったリストの 1 枚の角。端だけ大きく丸め、間は小さくする(Android 16 の設定の画面と同じ形)。 */
+fun groupShape(index: Int, count: Int): Shape {
+    val big = 24.dp
+    val small = 6.dp
+    val top = if (index == 0) big else small
+    val bottom = if (index == count - 1) big else small
+    return RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom)
+}
+
+/** タイトルの丸い目印。内蔵のアイコンか、名前の頭文字を、タイトルの色の淡い地の上に濃い色で出す。 */
 @Composable
 fun TitleAvatar(name: String, iconKey: String?, colorArgb: Int, modifier: Modifier = Modifier, size: Dp = 40.dp) {
-    val color = Color(colorArgb)
-    val on = onColor(color)
-    Box(modifier.size(size).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
+    val (background, on) = titleTones(Color(colorArgb))
+    Box(modifier.size(size).clip(CircleShape).background(background), contentAlignment = Alignment.Center) {
         val icon = TitleIcons[iconKey]
         if (icon != null) {
-            Icon(icon, contentDescription = null, tint = on, modifier = Modifier.size(size * 0.6f))
+            Icon(icon, contentDescription = null, tint = on, modifier = Modifier.size(size * 0.52f))
         } else {
             val trimmed = name.trim()
             // 絵文字などの 2 つで 1 文字の物を途中で切らない
@@ -204,14 +224,15 @@ fun StaminaGauge(
     val near = !full && fraction >= 0.9f
     val target = when {
         full -> MaterialTheme.colorScheme.error
-        near -> MaterialTheme.colorScheme.tertiary
-        else -> accent
+        near -> LocalStatusColors.current.warning
+        // タイトルの色は、地の明るさに合わせて読める濃さにしてから使う
+        else -> titleTones(accent).second
     }
     val barColor by animateColorAsState(target, tween(600), label = "gaugeColor")
     val animated by animateFloatAsState(fraction, spring(stiffness = Spring.StiffnessLow), label = "gaugeLength")
     val click = if (onClick != null) Modifier.clickable(onClickLabel = "今の値を記録する", onClick = onClick) else Modifier
 
-    Column(modifier.fillMaxWidth().then(click).heightIn(min = 48.dp).padding(vertical = 4.dp)) {
+    Column(modifier.fillMaxWidth().then(click).heightIn(min = 48.dp).padding(vertical = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = when {
@@ -227,18 +248,33 @@ fun StaminaGauge(
                 tint = barColor,
                 modifier = Modifier.size(18.dp),
             )
-            Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 6.dp).weight(1f))
-            Text("$value / ${resource.maxValue}", style = MaterialTheme.typography.labelLarge)
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 6.dp).weight(1f),
+            )
+            Text(
+                "$value / ${resource.maxValue}",
+                style = MaterialTheme.typography.titleSmallEmphasized,
+                modifier = Modifier.padding(start = 8.dp),
+            )
         }
+        // 隙間と右端の点(M3 の既定)は消し、後ろの枠を敷いて全体の長さを見せる
         LinearProgressIndicator(
             progress = { animated },
             color = barColor,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).height(8.dp).clip(RoundedCornerShape(4.dp)),
+            trackColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+            gapSize = 0.dp,
+            drawStopIndicator = {},
+            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).height(10.dp).clip(RoundedCornerShape(5.dp)),
         )
         Text(
             staminaStatus(resource, now, zone),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // 満タンは文字も危険の色にする(タイトルの色が赤でも、満タンと見分けられるように)
+            color = if (full) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -293,9 +329,9 @@ fun TaskCheckRow(label: String, sub: String?, checked: Boolean, onCheckedChange:
 fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.typography.titleSmallEmphasized,
         color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(top = 16.dp, bottom = 4.dp),
+        modifier = modifier.padding(start = 16.dp, top = 20.dp, bottom = 5.dp),
     )
 }
 

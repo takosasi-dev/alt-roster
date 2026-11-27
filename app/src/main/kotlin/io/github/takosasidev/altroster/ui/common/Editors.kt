@@ -152,7 +152,7 @@ fun TitleEditDialog(initial: GameTitle?, knownTags: List<String>, onSave: (GameT
                     Modifier
                         .size(48.dp)
                         .selectable(selected = selected, role = Role.RadioButton, onClick = { iconKey = key })
-                        .semantics { contentDescription = key ?: "頭文字" },
+                        .semantics { contentDescription = key?.let { TitleIconLabels[it] ?: it } ?: "頭文字" },
                     contentAlignment = Alignment.Center,
                 ) {
                     Box(

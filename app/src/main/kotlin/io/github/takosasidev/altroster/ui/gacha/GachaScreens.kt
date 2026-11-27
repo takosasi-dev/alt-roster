@@ -1,8 +1,29 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 
 package io.github.takosasidev.altroster.ui.gacha
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import io.github.takosasidev.altroster.ui.common.groupShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +33,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -24,11 +44,9 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -66,8 +84,10 @@ fun GachaListScreen(vm: RosterViewModel, onEdit: (Long) -> Unit) {
     val roster = vm.roster.collectAsStateWithLifecycle().value
     var deleting by remember { mutableStateOf<GachaLog?>(null) }
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
-        topBar = { TopAppBar(title = { Text("課金の記録") }) },
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = { LargeFlexibleTopAppBar(title = { Text("課金の記録") }, scrollBehavior = scrollBehavior) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { onEdit(NEW_GACHA_ID) },
@@ -78,13 +98,25 @@ fun GachaListScreen(vm: RosterViewModel, onEdit: (Long) -> Unit) {
     ) { padding ->
         if (roster == null) return@Scaffold
         val thisMonth = Spending.monthTotal(roster, YearMonth.from(vm.now().atZone(vm.zone())))
-        LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
+        // 一覧は新しい順なので、月ごとに分けても順番は崩れない
+        val byMonth = remember(roster.gachaLogs) { roster.gachaLogs.groupBy { YearMonth.from(it.date) } }
+        LazyColumn(
+            Modifier.padding(padding).fillMaxSize(),
+            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
             item(key = "month") {
-                Text(
-                    "今月の合計 ${Format.yen(thisMonth.total)}(${thisMonth.count} 件)",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(16.dp),
-                )
+                Card(
+                    Modifier.fillMaxWidth().padding(bottom = 9.dp),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                ) {
+                    Column(Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
+                        Text("今月の合計", style = MaterialTheme.typography.labelLarge)
+                        Text(Format.yen(thisMonth.total), style = MaterialTheme.typography.displaySmallEmphasized)
+                        Text("${thisMonth.count} 件", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
             if (roster.gachaLogs.isEmpty()) {
                 item(key = "empty") {
@@ -95,31 +127,25 @@ fun GachaListScreen(vm: RosterViewModel, onEdit: (Long) -> Unit) {
                     )
                 }
             }
-            items(roster.gachaLogs, key = { it.id }) { log ->
-                val title = roster.titleOfAccount(log.gameAccountId)
-                Row(
-                    Modifier.fillMaxWidth().clickable(onClickLabel = "編集") { onEdit(log.id) }.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (title != null) TitleAvatar(title, size = 36.dp)
-                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+            byMonth.forEach { (month, logs) ->
+                item(key = "h$month") {
+                    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 6.dp)) {
                         Text(
-                            "${Format.yen(log.amount.toLong())}  ${roster.accountDisplayName(log.gameAccountId)}",
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                            "${month.year}年${month.monthValue}月",
+                            style = MaterialTheme.typography.titleSmallEmphasized,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f),
                         )
                         Text(
-                            listOfNotNull("${log.date.year}/${log.date.monthValue}/${log.date.dayOfMonth}", log.currencyType, log.memo)
-                                .joinToString(" ・ "),
-                            style = MaterialTheme.typography.bodySmall,
+                            Format.yen(logs.sumOf { it.amount.toLong() }),
+                            style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    IconButton(onClick = { deleting = log }) { Icon(Icons.Filled.Delete, contentDescription = "削除") }
                 }
-                HorizontalDivider()
+                itemsIndexed(logs, key = { _, it -> it.id }) { index, log ->
+                    LogRow(roster, log, groupShape(index, logs.size), onEdit = { onEdit(log.id) }, onDelete = { deleting = log })
+                }
             }
         }
     }
@@ -135,6 +161,40 @@ fun GachaListScreen(vm: RosterViewModel, onEdit: (Long) -> Unit) {
             },
             onDismiss = { deleting = null },
         )
+    }
+}
+
+/** 記録の 1 行。金額を右に大きく出し、左はタイトルの目印と、アカウント・日付・通貨・メモ。 */
+@Composable
+private fun LogRow(roster: Roster, log: GachaLog, shape: Shape, onEdit: () -> Unit, onDelete: () -> Unit) {
+    val title = roster.titleOfAccount(log.gameAccountId)
+    Surface(shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClickLabel = "編集", onClick = onEdit).padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (title != null) TitleAvatar(title, size = 40.dp)
+            Column(Modifier.weight(1f).padding(start = 14.dp, end = 8.dp)) {
+                Text(
+                    roster.accountDisplayName(log.gameAccountId),
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    listOfNotNull("${log.date.year}/${log.date.monthValue}/${log.date.dayOfMonth}", log.currencyType, log.memo)
+                        .joinToString(" ・ "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Text(Format.yen(log.amount.toLong()), style = MaterialTheme.typography.titleMediumEmphasized)
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Outlined.Delete, contentDescription = "削除", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }
 
@@ -201,9 +261,10 @@ fun GachaEntryScreen(vm: RosterViewModel, logId: Long, onDone: () -> Unit) {
             Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Box {
-                OutlinedButton(onClick = { accountMenu = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text(accountId?.let { roster.accountLabel(it) } ?: "アカウントを選ぶ")
+                PickRow(Icons.Outlined.Person, accountId?.let { roster.accountLabel(it) } ?: "アカウントを選ぶ", groupShape(0, 2)) {
+                    accountMenu = true
                 }
                 DropdownMenu(expanded = accountMenu, onDismissRequest = { accountMenu = false }) {
                     choices.forEach { account ->
@@ -217,7 +278,10 @@ fun GachaEntryScreen(vm: RosterViewModel, logId: Long, onDone: () -> Unit) {
                     }
                 }
             }
-            OutlinedButton(onClick = { pickingDate = true }) { Text("日付: ${date.year}/${date.monthValue}/${date.dayOfMonth}") }
+            PickRow(Icons.Outlined.CalendarMonth, "日付: ${date.year}/${date.monthValue}/${date.dayOfMonth}", groupShape(1, 2)) {
+                pickingDate = true
+            }
+            }
             NumberField(amount, { amount = it }, "金額", suffix = "円")
             OutlinedTextField(
                 value = currency,
@@ -251,13 +315,34 @@ fun GachaEntryScreen(vm: RosterViewModel, logId: Long, onDone: () -> Unit) {
                         onDone()
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("保存") }
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(56.dp),
+            ) { Text("保存", style = MaterialTheme.typography.titleMedium) }
         }
     }
 
     if (pickingDate) {
         DatePickDialog(date, onConfirm = { date = it; pickingDate = false }, onDismiss = { pickingDate = false })
+    }
+}
+
+/** 押すと選ぶ画面が開く行(行頭に丸いアイコン、右に矢印)。 */
+@Composable
+private fun PickRow(icon: ImageVector, text: String, shape: Shape, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = modifier.fillMaxWidth()) {
+        Row(Modifier.clickable(onClick = onClick).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center,
+            ) { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(22.dp)) }
+            Text(
+                text,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+            )
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 

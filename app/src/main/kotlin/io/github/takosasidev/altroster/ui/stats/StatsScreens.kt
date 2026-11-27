@@ -1,6 +1,25 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 
 package io.github.takosasidev.altroster.ui.stats
+
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.TaskAlt
+import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import io.github.takosasidev.altroster.ui.common.groupShape
+import io.github.takosasidev.altroster.ui.theme.titleTones
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -24,7 +43,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,7 +51,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -61,7 +78,6 @@ import io.github.takosasidev.altroster.core.calc.TitleTotal
 import io.github.takosasidev.altroster.core.calc.YearlyReview
 import io.github.takosasidev.altroster.core.calc.YearlyReviews
 import io.github.takosasidev.altroster.ui.RosterViewModel
-import io.github.takosasidev.altroster.ui.common.SectionHeader
 import io.github.takosasidev.altroster.ui.common.TitleAvatar
 import java.time.YearMonth
 
@@ -75,7 +91,11 @@ fun StatsScreen(vm: RosterViewModel, onOpenYearly: () -> Unit) {
     var allTime by rememberSaveable { mutableStateOf(false) }
     val month = nowMonth.minusMonths(monthsBack.toLong())
 
-    Scaffold(topBar = { TopAppBar(title = { Text("集計") }) }) { padding ->
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = { LargeFlexibleTopAppBar(title = { Text("集計") }, scrollBehavior = scrollBehavior) },
+    ) { padding ->
         if (roster == null) return@Scaffold
         val total = Spending.monthTotal(roster, month)
         val months = remember(roster, month) { Spending.monthly(roster, month, months = 12) }
@@ -84,80 +104,152 @@ fun StatsScreen(vm: RosterViewModel, onOpenYearly: () -> Unit) {
         }
         val insights = remember(roster, nowMonth) { Insights.generate(roster, vm.now(), vm.zone()) }
 
-        Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { monthsBack++ }) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "前の月")
-                }
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        if (monthsBack == 0) "今月(${month.year}年${month.monthValue}月)" else "${month.year}年${month.monthValue}月",
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                    Text(Format.yen(total.total), style = MaterialTheme.typography.headlineMedium)
-                    Text("${total.count} 件", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                IconButton(onClick = { monthsBack-- }, enabled = monthsBack > 0) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "次の月")
+        Column(
+            Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            // 月の切り替えと、その月の合計
+            Panel(null, groupShape(0, 3)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    FilledTonalIconButton(onClick = { monthsBack++ }, shapes = IconButtonDefaults.shapes()) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "前の月")
+                    }
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            if (monthsBack == 0) "今月(${month.year}年${month.monthValue}月)" else "${month.year}年${month.monthValue}月",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(Format.yen(total.total), style = MaterialTheme.typography.displaySmallEmphasized)
+                        Text("${total.count} 件", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    FilledTonalIconButton(onClick = { monthsBack-- }, enabled = monthsBack > 0, shapes = IconButtonDefaults.shapes()) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "次の月")
+                    }
                 }
             }
 
-            SectionHeader("月ごとの合計(${month.year}年${month.monthValue}月までの 12 か月)")
-            MonthlyBars(months)
-
-            SectionHeader("タイトル別")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = !allTime, onClick = { allTime = false }, label = { Text("この月") })
-                FilterChip(selected = allTime, onClick = { allTime = true }, label = { Text("全部の期間") })
+            Panel("月ごとの合計(${month.year}年${month.monthValue}月までの 12 か月)", groupShape(1, 3)) {
+                MonthlyBars(months)
             }
-            if (byTitle.isEmpty()) {
-                Text("この期間の記録はありません。", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
-            }
-            val top = byTitle.maxOfOrNull { it.total } ?: 0L
-            byTitle.forEach { TitleBar(it, top) }
 
-            SectionHeader("気づき")
+            Panel("タイトル別", groupShape(2, 3)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = !allTime, onClick = { allTime = false }, label = { Text("この月") })
+                    FilterChip(selected = allTime, onClick = { allTime = true }, label = { Text("全部の期間") })
+                }
+                if (byTitle.isEmpty()) {
+                    Text("この期間の記録はありません。", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
+                }
+                val top = byTitle.maxOfOrNull { it.total } ?: 0L
+                byTitle.forEach { TitleBar(it, top) }
+            }
+
+            Text(
+                "気づき",
+                style = MaterialTheme.typography.titleSmallEmphasized,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 8.dp),
+            )
             if (insights.isEmpty()) {
-                Text("記録がたまると、ここに傾向が出ます。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Panel(null, RoundedCornerShape(24.dp)) {
+                    Text("記録がたまると、ここに傾向が出ます。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-            insights.forEach { line ->
-                Row(Modifier.padding(vertical = 6.dp)) {
-                    Icon(Icons.Filled.Lightbulb, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
-                    Text(line, modifier = Modifier.padding(start = 8.dp))
+            insights.forEachIndexed { i, line ->
+                Panel(null, groupShape(i, insights.size)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Outlined.Lightbulb,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        Text(line, modifier = Modifier.padding(start = 14.dp))
+                    }
                 }
             }
 
-            OutlinedButton(onClick = onOpenYearly, modifier = Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 32.dp)) {
-                Text("年間の振り返りを見る")
+            Surface(
+                onClick = onOpenYearly,
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            ) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(22.dp))
+                    }
+                    Text(
+                        "年間の振り返りを見る",
+                        style = MaterialTheme.typography.titleMediumEmphasized,
+                        modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                    )
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                }
             }
         }
     }
 }
 
-/** 月ごとの棒グラフ。棒の上の金額は出さず、月の番号だけを下に出す(金額は読み上げに入れる)。 */
+/** 見出しつきの 1 枚。まとまりの中の位置で [shape] が変わる。 */
+@Composable
+private fun Panel(title: String?, shape: Shape, content: @Composable () -> Unit) {
+    Card(Modifier.fillMaxWidth(), shape = shape) {
+        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (title != null) {
+                Text(title, style = MaterialTheme.typography.titleSmallEmphasized, color = MaterialTheme.colorScheme.primary)
+            }
+            content()
+        }
+    }
+}
+
+/**
+ * 月ごとの棒グラフ。棒の上の金額は出さず、月の番号だけを下に出す(金額は読み上げに入れる)。
+ * どの月にも空の枠を描き、0 円の月も「無い」と分かるようにする。
+ */
 @Composable
 private fun MonthlyBars(months: List<MonthTotal>) {
     val max = months.maxOf { it.total }.coerceAtLeast(1L)
     val barColor = MaterialTheme.colorScheme.primary
-    val trackColor = MaterialTheme.colorScheme.surfaceVariant
-    Row(Modifier.fillMaxWidth().height(160.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    val trackColor = MaterialTheme.colorScheme.surfaceContainerLowest
+    Row(Modifier.fillMaxWidth().height(150.dp).padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         months.forEachIndexed { index, m ->
+            val current = index == months.lastIndex
             Column(
                 Modifier.weight(1f).fillMaxHeight().semantics(mergeDescendants = true) {
                     contentDescription = "${m.month.year}年${m.month.monthValue}月 ${Format.yen(m.total)}"
                 },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Box(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(trackColor), contentAlignment = Alignment.BottomCenter) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(m.total.toFloat() / max)
-                            // いちばん右が、いま見ている月
-                            .background(if (index == months.lastIndex) barColor else barColor.copy(alpha = 0.55f)),
-                    )
+                Box(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(trackColor), contentAlignment = Alignment.BottomCenter) {
+                    if (m.total > 0) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight(m.total.toFloat() / max)
+                                .clip(RoundedCornerShape(6.dp))
+                                // いちばん右が、いま見ている月
+                                .background(if (current) barColor else barColor.copy(alpha = 0.35f)),
+                        )
+                    }
                 }
-                Text(m.month.monthValue.toString(), style = MaterialTheme.typography.labelSmall)
+                Text(
+                    m.month.monthValue.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (current) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
             }
         }
     }
@@ -166,16 +258,24 @@ private fun MonthlyBars(months: List<MonthTotal>) {
 @Composable
 private fun TitleBar(total: TitleTotal, top: Long) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        TitleAvatar(total.title, size = 32.dp)
+        TitleAvatar(total.title, size = 36.dp)
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(total.title.name, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${Format.yen(total.total)}(${total.count} 件)", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    "${Format.yen(total.total)}(${total.count} 件)",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
             }
+            // 隙間と右端の点(M3 の既定)は消し、後ろの枠を敷いて全体の長さを見せる
             LinearProgressIndicator(
                 progress = { if (top <= 0) 0f else total.total.toFloat() / top },
-                color = Color(total.title.colorArgb),
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp).height(6.dp).clip(RoundedCornerShape(3.dp)),
+                color = titleTones(Color(total.title.colorArgb)).second,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                gapSize = 0.dp,
+                drawStopIndicator = {},
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp).height(8.dp).clip(RoundedCornerShape(4.dp)),
             )
         }
     }
@@ -219,24 +319,39 @@ fun YearlyScreen(vm: RosterViewModel, onBack: () -> Unit) {
             )
             HorizontalPager(state = pager, modifier = Modifier.weight(1f), pageSpacing = 12.dp) { page ->
                 val slide = slides[page]
+                // カードは中身の高さにして、ページの真ん中に置く(全面に伸ばすと間延びするため)
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Card(
-                    Modifier.fillMaxSize(),
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(32.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                 ) {
                     Column(
-                        Modifier.fillMaxSize().padding(24.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 48.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        Text(slide.heading, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+                        Box(
+                            Modifier.size(72.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(slide.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(36.dp))
+                        }
+                        Text(
+                            slide.heading,
+                            style = MaterialTheme.typography.titleMediumEmphasized,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 24.dp),
+                        )
                         Text(
                             slide.value,
-                            style = MaterialTheme.typography.displaySmall,
+                            style = MaterialTheme.typography.displaySmallEmphasized,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(vertical = 16.dp),
                         )
-                        Text(slide.note, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+                        Text(slide.note, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
                     }
+                }
                 }
             }
             // いま何枚目かの印。色だけでなく大きさでも分ける
@@ -262,24 +377,27 @@ fun YearlyScreen(vm: RosterViewModel, onBack: () -> Unit) {
     }
 }
 
-private data class Slide(val heading: String, val value: String, val note: String)
+private data class Slide(val heading: String, val value: String, val note: String, val icon: ImageVector)
 
 private fun slidesOf(r: YearlyReview): List<Slide> = listOf(
-    Slide("${r.year}年の課金の合計", Format.yen(r.totalSpend), "${r.spendCount} 件の記録"),
+    Slide("${r.year}年の課金の合計", Format.yen(r.totalSpend), "${r.spendCount} 件の記録", Icons.Filled.Payments),
     Slide(
         "いちばん課金したタイトル",
         r.topSpendTitle?.title?.name ?: "なし",
         r.topSpendTitle?.let { "${Format.yen(it.total)}(${it.count} 件)" } ?: "課金の記録がありません",
+        Icons.Filled.EmojiEvents,
     ),
     Slide(
         "いちばん課金が多かった月",
         r.peakMonth?.let { "${it.month.monthValue}月" } ?: "なし",
         r.peakMonth?.let { Format.yen(it.total) } ?: "課金の記録がありません",
+        Icons.Filled.CalendarMonth,
     ),
     Slide(
         "いちばん遊んだタイトル",
         r.mostPlayed?.first?.name ?: "なし",
         r.mostPlayed?.let { "タスクを ${it.second} 回チェック" } ?: "タスクのチェックの記録がありません",
+        Icons.Filled.SportsEsports,
     ),
-    Slide("対応したイベント", "${r.eventsCompleted} 件", "タスクのチェックは合計 ${r.tasksChecked} 回"),
+    Slide("対応したイベント", "${r.eventsCompleted} 件", "タスクのチェックは合計 ${r.tasksChecked} 回", Icons.Filled.TaskAlt),
 )

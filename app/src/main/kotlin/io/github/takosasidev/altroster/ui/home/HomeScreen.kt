@@ -1,11 +1,23 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 
 package io.github.takosasidev.altroster.ui.home
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import io.github.takosasidev.altroster.ui.common.groupShape
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +30,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -119,23 +130,12 @@ fun HomeScreen(vm: RosterViewModel, onOpenTitle: (Long) -> Unit) {
     // この画面でチェックしたタスク。すぐ消さず、取り消し線を付けたまま残す(押し間違いを戻せるように)
     val recentlyChecked = remember { mutableStateListOf<Long>() }
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
+        // 検索中は普通のバーなので、縮む動きをつながない(つなぐと最初のスワイプが見えない縮みに取られる)
+        modifier = if (searching) Modifier else Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = {
-                    if (searching) {
-                        OutlinedTextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            placeholder = { Text("タイトルの名前で検索") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else {
-                        Text("AltRoster")
-                    }
-                },
-                actions = {
+            val actions: @Composable RowScope.() -> Unit = {
                     IconButton(onClick = {
                         searching = !searching
                         if (!searching) query = ""
@@ -164,8 +164,24 @@ fun HomeScreen(vm: RosterViewModel, onOpenTitle: (Long) -> Unit) {
                             }
                         }
                     }
-                },
-            )
+            }
+            if (searching) {
+                TopAppBar(
+                    title = {
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            placeholder = { Text("タイトルの名前で検索") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    },
+                    actions = actions,
+                )
+            } else {
+                // 大きな見出し。スクロールすると細いバーに縮む
+                LargeFlexibleTopAppBar(title = { Text("AltRoster") }, actions = actions, scrollBehavior = scrollBehavior)
+            }
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -195,17 +211,21 @@ fun HomeScreen(vm: RosterViewModel, onOpenTitle: (Long) -> Unit) {
 
                 Column(Modifier.padding(padding).fillMaxSize()) {
                     SummaryBar(digest)
+                    // タイトルのカードは 1 つのまとまりとして見せる(端だけ大きく丸め、間は細い隙間)
                     LazyColumn(
                         contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp),
                     ) {
                         item(key = "digest") {
-                            DigestCard(digest, roster, checked, recentlyChecked, now, zone, toggleTask) { quickStaminaId = it }
+                            DigestCard(
+                                digest, roster, checked, recentlyChecked, now, zone, toggleTask,
+                                modifier = Modifier.padding(bottom = 9.dp),
+                            ) { quickStaminaId = it }
                         }
                         if (tags.isNotEmpty()) {
                             item(key = "tags") {
                                 Row(
-                                    Modifier.horizontalScroll(rememberScrollState()),
+                                    Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 9.dp),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
                                     FilterChip(selected = tag == null, onClick = { tag = null }, label = { Text("すべて") })
@@ -228,9 +248,10 @@ fun HomeScreen(vm: RosterViewModel, onOpenTitle: (Long) -> Unit) {
                                 )
                             }
                         }
-                        items(titles, key = { it.id }) { title ->
+                        itemsIndexed(titles, key = { _, it -> it.id }) { index, title ->
                             TitleCard(
                                 title = title,
+                                shape = groupShape(index, titles.size),
                                 roster = roster,
                                 checked = checked,
                                 now = now,
@@ -279,28 +300,57 @@ fun HomeScreen(vm: RosterViewModel, onOpenTitle: (Long) -> Unit) {
     }
 }
 
-/** いつも見える、数だけの帯。細かい通知を追いかけなくても、ここを見れば足りると分かるようにする。 */
+/**
+ * いつも見える、数だけの帯。細かい通知を追いかけなくても、ここを見れば足りると分かるようにする。
+ * 数の横に短い名前も書く(アイコンの形だけに頼らない)。
+ */
 @Composable
 private fun SummaryBar(digest: Digest) {
-    Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("本日のダイジェスト", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-            Count(Icons.Filled.Bolt, "満タン間近のスタミナ", digest.staminas.size)
-            Count(Icons.Filled.Alarm, "24 時間以内に終わるイベント", digest.events.size)
-            Count(Icons.Filled.TaskAlt, "未消化のタスク", digest.uncheckedTasks.size)
+    Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp)) {
+        Text(
+            "本日のダイジェスト",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Count(Icons.Filled.Bolt, "満タン間近のスタミナ", "満タン間近", digest.staminas.size, Modifier.weight(1f))
+            Count(Icons.Filled.Alarm, "24 時間以内に終わるイベント", "24時間以内", digest.events.size, Modifier.weight(1f))
+            Count(Icons.Filled.TaskAlt, "未消化のタスク", "未消化", digest.uncheckedTasks.size, Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-private fun Count(icon: ImageVector, description: String, count: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = description, modifier = Modifier.size(18.dp))
-        Text(count.toString(), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 4.dp))
+private fun Count(icon: ImageVector, description: String, label: String, count: Int, modifier: Modifier) {
+    val active = count > 0
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        color = if (active) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(Modifier.padding(horizontal = 10.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                icon,
+                contentDescription = description,
+                tint = if (active) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+            Column(Modifier.padding(start = 8.dp)) {
+                Text(
+                    count.toString(),
+                    style = MaterialTheme.typography.titleLargeEmphasized,
+                    color = if (active) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
     }
 }
 
@@ -314,14 +364,23 @@ private fun DigestCard(
     now: Instant,
     zone: ZoneId,
     onToggleTask: (DailyTask, Boolean) -> Unit,
+    modifier: Modifier = Modifier,
     onQuickStamina: (Long) -> Unit,
 ) {
     // 未消化の物と、この画面でいまチェックした物
     val tasks = roster.activeTasks.filter { it.id !in checked || it.id in recentlyChecked }
 
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
-        Column(Modifier.fillMaxWidth().padding(12.dp)) {
-            Text("今すぐ気にすること", style = MaterialTheme.typography.titleMedium)
+    Card(
+        modifier,
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Text(
+                "今すぐ気にすること",
+                style = MaterialTheme.typography.titleMediumEmphasized,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
             if (digest.staminas.isEmpty() && digest.events.isEmpty() && tasks.isEmpty()) {
                 Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -360,23 +419,29 @@ private fun DigestCard(
 fun EventRow(event: GameEvent, titleName: String?, now: Instant, onComplete: (() -> Unit)?) {
     val urgency = EventTime.urgency(event, now)
     val color by animateColorAsState(urgencyColor(urgency), tween(600), label = "countdown")
-    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = when (urgency) {
-                Urgency.URGENT -> Icons.Filled.Warning
-                Urgency.WARNING -> Icons.Filled.Schedule
-                else -> Icons.Filled.Event
-            },
-            contentDescription = when (urgency) {
-                Urgency.URGENT -> "24 時間以内"
-                Urgency.WARNING -> "3 日以内"
-                Urgency.ENDED -> "終了"
-                Urgency.NORMAL -> null
-            },
-            tint = color,
-            modifier = Modifier.size(20.dp),
-        )
-        Column(Modifier.weight(1f).padding(start = 8.dp)) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+        // 記号は同じ色の淡い丸に載せる
+        Box(
+            Modifier.size(32.dp).clip(CircleShape).background(color.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = when (urgency) {
+                    Urgency.URGENT -> Icons.Filled.Warning
+                    Urgency.WARNING -> Icons.Filled.Schedule
+                    else -> Icons.Filled.Event
+                },
+                contentDescription = when (urgency) {
+                    Urgency.URGENT -> "24 時間以内"
+                    Urgency.WARNING -> "3 日以内"
+                    Urgency.ENDED -> "終了"
+                    Urgency.NORMAL -> null
+                },
+                tint = color,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Text(event.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val left = if (urgency == Urgency.ENDED) "終了しました" else "あと ${Format.duration(EventTime.remaining(event, now))}"
             Text(
@@ -395,6 +460,7 @@ fun EventRow(event: GameEvent, titleName: String?, now: Instant, onComplete: (()
 @Composable
 private fun TitleCard(
     title: GameTitle,
+    shape: Shape,
     roster: Roster,
     checked: Set<Long>,
     now: Instant,
@@ -420,18 +486,18 @@ private fun TitleCard(
     // 複数のスタミナがあるときに先に見せるのは、いちばん早く満タンになる物
     val primary: StaminaResource? = staminas.minByOrNull { Stamina.fullAt(it) ?: Instant.MAX }
 
-    Card {
+    Card(shape = shape) {
         Column(Modifier.fillMaxWidth()) {
             Row(
                 Modifier
                     .fillMaxWidth()
                     .clickable(onClickLabel = if (expanded) "畳む" else "開く") { expanded = !expanded }
-                    .padding(start = 12.dp, top = 8.dp, bottom = 8.dp),
+                    .padding(start = 16.dp, top = 12.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TitleAvatar(title)
-                Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                    Text(title.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                TitleAvatar(title, size = 44.dp)
+                Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                    Text(title.name, style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val summary = listOfNotNull(
                         if (unchecked > 0) "未消化 $unchecked 件" else null,
                         events.firstOrNull()?.let { "期限 あと ${Format.duration(EventTime.remaining(it, now))}" },
@@ -450,6 +516,7 @@ private fun TitleCard(
                 Icon(
                     if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                     contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Box {
                     IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "メニュー") }
@@ -463,7 +530,7 @@ private fun TitleCard(
                 }
             }
 
-            Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp)) {
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp)) {
                 if (!expanded && primary != null) {
                     StaminaGauge(
                         resource = primary,

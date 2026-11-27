@@ -29,8 +29,14 @@ object Stamina {
         val need = target.coerceAtMost(r.maxValue) - base(r)
         if (need <= 0) return r.recordedAt
         if (r.recoveryIntervalMinutes <= 0) return null
-        return r.recordedAt.plus(Duration.ofMinutes(need.toLong() * r.recoveryIntervalMinutes))
+        // 最大値と間隔に 9 桁ずつ入れると、分を秒に直す所や時刻の足し算があふれて落ちる。
+        // 1000 年より先は「当分届かない」として 1000 年後にそろえる(Int × Int は Long に収まる)
+        val minutes = (need.toLong() * r.recoveryIntervalMinutes).coerceAtMost(MAX_REACH_MINUTES)
+        return r.recordedAt.plus(Duration.ofMinutes(minutes))
     }
+
+    /** [reachAt] が返す時刻の、記録の時刻からの上限(1000 年)。 */
+    private const val MAX_REACH_MINUTES = 1000L * 366 * 24 * 60
 
     /** 満タンになる時刻。 */
     fun fullAt(r: StaminaResource): Instant? = reachAt(r, r.maxValue)

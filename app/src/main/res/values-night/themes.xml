@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      端末がダークモードの時の、起動の瞬間の窓の色(Compose が描き始めるまで見える)。
+      これが無いと明るい方のテーマが使われ、暗い画面の前に白い窓が一瞬出る。
+      色は Material 3 の暗い背景に近い値にして、描き始めた時の色の差を小さくする。
+    -->
+    <style name="Theme.App" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#FF141218</item>
+    </style>
+</resources>

@@ -216,6 +216,8 @@ fun GachaEntryScreen(vm: RosterViewModel, logId: Long, onDone: () -> Unit) {
     var memo by remember { mutableStateOf("") }
     var accountMenu by remember { mutableStateOf(false) }
     var pickingDate by remember { mutableStateOf(false) }
+    // 保存を押してから画面が消えるまで(切り替えの間も押せる)の 2 回目で、新しい記録が 2 件できるのを防ぐ
+    var saved by remember { mutableStateOf(false) }
 
     // 記録が読めたら 1 回だけ、入力欄の初めの値を入れる
     LaunchedEffect(roster != null) {
@@ -298,10 +300,11 @@ fun GachaEntryScreen(vm: RosterViewModel, logId: Long, onDone: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             )
             Button(
-                enabled = accountId != null && amountInt != null,
+                enabled = accountId != null && amountInt != null && !saved,
                 onClick = {
                     val account = accountId
-                    if (account != null && amountInt != null) {
+                    if (account != null && amountInt != null && !saved) {
+                        saved = true
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         val base = existing ?: GachaLog(gameAccountId = account, date = date, amount = amountInt, createdAt = vm.now())
                         val log = base.copy(

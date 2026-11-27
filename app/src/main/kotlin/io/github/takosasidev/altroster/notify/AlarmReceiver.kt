@@ -34,6 +34,12 @@ class AlarmReceiver : BroadcastReceiver() {
             Intent.ACTION_TIME_CHANGED,
             Intent.ACTION_TIMEZONE_CHANGED,
             Intent.ACTION_MY_PACKAGE_REPLACED,
+            // 正確なアラームを設定で許可した時(Android 12 以降)。許可の前に仕込んだ 1 本は
+            // おおよその時刻のままなので、ここで正確な時刻に仕込み直す
+            ACTION_EXACT_ALARM_PERMISSION_CHANGED,
         )
+
+        /** AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED(API 31)と同じ文字列。 */
+        const val ACTION_EXACT_ALARM_PERMISSION_CHANGED = "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
     }
 }

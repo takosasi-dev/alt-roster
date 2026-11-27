@@ -202,8 +202,11 @@ fun HomeScreen(vm: RosterViewModel, onOpenTitle: (Long) -> Unit) {
             else -> {
                 val digest = remember(roster, now, zone) { DigestBuilder.build(roster, now, zone, staminaWithin = STAMINA_SOON) }
                 val checked = remember(roster, now, zone) { TaskReset.checkedTaskIds(roster, now, zone) }
-                val titles = remember(roster, query, tag, sort, now) { HomeList.apply(roster, query, tag, sort, now) }
                 val tags = remember(roster) { HomeList.allTags(roster) }
+                // 選んでいたタグがどのタイトルからも外れたら、絞り込みも外す
+                // (タグが 1 つも無くなるとチップの列ごと消えて、外す手段が無くなるため)
+                if (tag != null && tag !in tags) tag = null
+                val titles = remember(roster, query, tag, sort, now) { HomeList.apply(roster, query, tag, sort, now) }
                 val toggleTask: (DailyTask, Boolean) -> Unit = { task, value ->
                     if (value) recentlyChecked.add(task.id) else recentlyChecked.remove(task.id)
                     vm.launch { setTaskChecked(task, value) }

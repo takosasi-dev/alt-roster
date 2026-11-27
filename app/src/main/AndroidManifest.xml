@@ -51,7 +51,8 @@
 
         <!--
           通知のアラームの受け口。アプリ自身が仕込んだアラームのほか、再起動・時計や時間帯の変更・
-          アプリの更新のあとに呼ばれて、アラームを仕込み直す。外のアプリからは呼べない(exported=false)。
+          アプリの更新・正確なアラームの許可のあとに呼ばれて、アラームを仕込み直す。
+          外のアプリからは呼べない(exported=false)。
         -->
         <receiver
             android:name=".notify.AlarmReceiver"
@@ -61,6 +62,7 @@
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
     </application>

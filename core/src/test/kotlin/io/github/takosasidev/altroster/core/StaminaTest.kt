@@ -54,6 +54,16 @@ class StaminaTest {
     }
 
     @Test
+    fun 最大値と間隔が9桁でも_満タンの時刻の計算で落ちない() {
+        // 999,999,999 足りない × 999,999,999 分は、秒に直すと Long をあふれる
+        val r = stamina(1, 1, max = 999_999_999, interval = 999_999_999, value = 0, threshold = 50)
+        val full = Stamina.fullAt(r)!!
+        assertTrue(full.isAfter(r.recordedAt.plus(java.time.Duration.ofDays(365L * 999))))
+        assertTrue(Stamina.thresholdAt(r)!!.isAfter(r.recordedAt))
+        assertFalse(Stamina.isFull(r, jst(2030, 1, 1)))
+    }
+
+    @Test
     fun 満タンの時刻は_足りない分かける間隔() {
         val r = stamina(1, 1, max = 100, interval = 5, value = 50, at = jst(2026, 8, 25, 14, 0))
         // 50 足りない × 5 分 = 250 分 = 4 時間 10 分

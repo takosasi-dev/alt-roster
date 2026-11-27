@@ -36,6 +36,13 @@ import androidx.compose.ui.unit.dp
  * 指紋や顔が登録されていればそれも、無ければ PIN・パターン・パスワードも受け付けるので、
  * 生体認証だけに頼って締め出されることが無い。同じ作者の収支管理アプリで実機の動作を確かめてある方式。
  */
+/**
+ * 解除したかどうか。プロセスの中だけに持つ。
+ * rememberSaveable に入れると、裏で終わったプロセスを履歴から戻した時に、保存された状態ごと
+ * 「解除済み」も戻り、認証なしで記録が見えてしまう。
+ */
+private val unlockedInProcess = mutableStateOf(false)
+
 @Composable
 fun AppLockGate(enabled: Boolean, content: @Composable () -> Unit) {
     val context = LocalContext.current
@@ -46,7 +53,7 @@ fun AppLockGate(enabled: Boolean, content: @Composable () -> Unit) {
     val canLock = remember(keyguard) { keyguard?.isDeviceSecure == true }
 
     // 画面の回転では保ち、プロセスが終わったらもう一度ロックする
-    var unlocked by rememberSaveable { mutableStateOf(false) }
+    var unlocked by unlockedInProcess
 
     if (!enabled || !canLock || unlocked) {
         content()

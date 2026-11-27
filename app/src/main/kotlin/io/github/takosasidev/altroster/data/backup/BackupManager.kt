@@ -180,7 +180,14 @@ object BackupManager {
             val parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))
             val target = DocumentsContract.createDocument(context.contentResolver, parent, ZIP_MIME, fileName)
                 ?: throw IllegalStateException("保存先のフォルダにファイルを作れませんでした")
-            exportToUri(context, target, password)
+            try {
+                exportToUri(context, target, password)
+            } catch (e: Exception) {
+                // 書きかけ・空の zip を残さない。残すと「新しい自動のバックアップ」に数えられ、
+                // 残す数を超えた分を消す時に、読める古いバックアップの方が先に消える
+                runCatching { DocumentsContract.deleteDocument(context.contentResolver, target) }
+                throw e
+            }
             target
         }
 

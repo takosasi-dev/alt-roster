@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "io.github.takosasidev.altroster"
-        minSdk = 26
+        minSdk = 24
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
@@ -31,6 +31,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Android 7.x(API 24・25)でも java.time を使えるようにする
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
         jvmTarget = "17"
@@ -57,6 +59,7 @@ android {
 
 dependencies {
     implementation(project(":core"))
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.runtime.ktx)

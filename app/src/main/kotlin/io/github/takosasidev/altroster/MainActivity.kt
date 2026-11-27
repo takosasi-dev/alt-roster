@@ -1,5 +1,6 @@
 package io.github.takosasidev.altroster
 
+import android.view.ViewGroup
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -96,6 +97,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Android 8.1(API 27)までは、OS が画面の最初の入力欄へ勝手にフォーカスを渡し、キーボードが出る。
+        // 入れ物の側でフォーカスを受けて、入力欄には押した時だけ渡す
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            findViewById<ViewGroup>(android.R.id.content).apply {
+                isFocusable = true
+                isFocusableInTouchMode = true
+                descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
+            }
+        }
         pendingIntent.value = intent
 
         // 開いた時の確かめ(自動のバックアップ、アラームの仕込み直し、ウィジェットの更新)は

@@ -1,5 +1,6 @@
 package io.github.takosasidev.altroster.notify
 
+import android.os.Build
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -80,6 +81,8 @@ object Notifier {
 
     /** 通知のチャンネル。同じ id で作り直しても、利用者が変えた設定は壊れない。 */
     fun ensureChannels(context: Context) {
+        // チャンネルは Android 8.0(API 26)から。それより前の版には無いので何もしない
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         listOf(
             NotificationChannel(CHANNEL_STAMINA, context.getString(R.string.channel_stamina), NotificationManager.IMPORTANCE_DEFAULT),

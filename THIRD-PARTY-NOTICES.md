@@ -18,6 +18,7 @@
 | DataStore Preferences(androidx.datastore:datastore-preferences) | 1.1.1 | Apache-2.0 |
 | Jetpack Glance(glance-appwidget / glance-material3) | 1.1.0 | Apache-2.0 |
 | Zip4j(net.lingala.zip4j:zip4j) | 2.11.5 | Apache-2.0 |
+| desugar_jdk_libs(com.android.tools:desugar_jdk_libs。Android 7.x で java.time などを使うための、OpenJDK 由来の写し) | 2.1.5 | GPL-2.0 with Classpath Exception |
 
 これらが引き込む AndroidX・Kotlin の関連のライブラリも Apache-2.0。
 
